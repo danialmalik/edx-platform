@@ -431,6 +431,13 @@ class CapaMixin(ScorableXBlockMixin, CapaFields):
             'graded': self.graded,
         })
 
+    def public_view(self, context=None):
+        """
+        MIT_OLL: enable public view for problems.
+        """
+        return self.student_view(context)
+
+
     def submit_button_name(self):
         """
         Determine the name for the "submit" button.
@@ -497,6 +504,7 @@ class CapaMixin(ScorableXBlockMixin, CapaFields):
         # If the user has forced the save button to display,
         # then show it as long as the problem is not closed
         # (past due / too many attempts)
+        # TODO: MIT_OLL: should disable this button if not logged in?
         if self.force_save_button:
             return not self.closed()
         else:
@@ -715,6 +723,12 @@ class CapaMixin(ScorableXBlockMixin, CapaFields):
                 u"Your answers were previously saved. Click '{button_name}' to grade them."
             ).format(button_name=self.submit_button_name())
 
+        # TODO: MIT_OLL : do not show "remaining" attempts since attempts do not get incremented
+        if not self.runtime.user_id:
+            attempts_allowed = 0
+        else:
+            attempts_allowed = self.max_attempts
+
         context = {
             'problem': content,
             'id': text_type(self.location),
@@ -726,7 +740,7 @@ class CapaMixin(ScorableXBlockMixin, CapaFields):
             'save_button': self.should_show_save_button(),
             'answer_available': self.answer_available(),
             'attempts_used': self.attempts,
-            'attempts_allowed': self.max_attempts,
+            'attempts_allowed': attempts_allowed,
             'demand_hint_possible': demand_hint_possible,
             'should_enable_next_hint': should_enable_next_hint,
             'answer_notification_type': answer_notification_type,
@@ -1138,7 +1152,11 @@ class CapaMixin(ScorableXBlockMixin, CapaFields):
         if kwargs.get('grader_response'):
             event['grader_response'] = kwargs['grader_response']
 
-        self.runtime.publish(self, 'grade', event)
+        ## TODO: MIT_OLL don't do this for anonymous user
+        ## self.runtime.user_id is None for Anonymous user
+        ## Add a waffle switch to enable public course access or use existing ones
+        if self.runtime.user_id:
+            self.runtime.publish(self, 'grade', event)
 
         return {'grade': self.score.raw_earned, 'max_grade': self.score.raw_possible}
 
@@ -1211,6 +1229,10 @@ class CapaMixin(ScorableXBlockMixin, CapaFields):
             correct_map = self.lcp.grade_answers(answers)
             # self.attempts refers to the number of attempts that did not
             # raise an error (0-based)
+
+            # TODO: MIT_OLL attempts are not being updated for anonymous users
+            # always 1 attempt
+
             self.attempts = self.attempts + 1
             self.lcp.done = True
             self.set_state_from_lcp()
@@ -1497,6 +1519,11 @@ class CapaMixin(ScorableXBlockMixin, CapaFields):
             msg = _(
                 "Your answers have been saved but not graded. Click '{button_name}' to grade them."
             ).format(button_name=self.submit_button_name())
+        # TODO: MIT_OLL. is this okay? should add login link?
+        if not self.runtime.user_id:
+            msg = _(
+                "You need to be logged in to be able to save your answers"
+            )
         return {
             'success': True,
             'msg': msg,
@@ -1531,7 +1558,11 @@ class CapaMixin(ScorableXBlockMixin, CapaFields):
                 # pylint: enable=line-too-long
             }
 
-        if not self.is_submitted():
+        # TODO: MIT_OLL add check for a flag
+        # use COURSE_ENABLE_UNENROLLED_ACCESS_FLAG waffle flag with course id
+        # get course id using self.course_id (courseLocator)
+
+        if not self.is_submitted() and self.runtime.user_id:
             event_info['failure'] = 'not_done'
             self.track_function_unmask('reset_problem_fail', event_info)
             return {

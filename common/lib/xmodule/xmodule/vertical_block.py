@@ -82,6 +82,7 @@ class VerticalBlock(SequenceFields, XModuleFields, StudioEditableBlock, XmlParse
                 child_block_context['wrap_xblock_data'] = {
                     'mark-completed-on-view-after-delay': complete_on_view_delay
                 }
+            # IMPORTANT MIT_OLL : a unit child is rendered here
             rendered_child = child.render(view, child_block_context)
             fragment.add_fragment_resources(rendered_child)
 

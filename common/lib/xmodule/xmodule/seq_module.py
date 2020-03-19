@@ -465,13 +465,6 @@ class SequenceModule(SequenceFields, ProctoringFields, XModule):
             item_type = item.get_icon_class()
             usage_id = item.scope_ids.usage_id
 
-            if item_type == 'problem' and not is_user_authenticated:
-                log.info(
-                    'Problem [%s] was not rendered because anonymous access is not allowed for graded content',
-                    usage_id
-                )
-                continue
-
             show_bookmark_button = False
             is_bookmarked = False
 
@@ -481,7 +474,7 @@ class SequenceModule(SequenceFields, ProctoringFields, XModule):
 
             context['show_bookmark_button'] = show_bookmark_button
             context['bookmarked'] = is_bookmarked
-
+            # IMPORTANT MIT_OLL : a unit is rendered here
             rendered_item = item.render(view, context)
             fragment.add_fragment_resources(rendered_item)
 

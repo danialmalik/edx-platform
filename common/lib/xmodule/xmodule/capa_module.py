@@ -59,6 +59,7 @@ class CapaModule(CapaMixin, XModule):
           'progress' : 'none'/'in_progress'/'done',
           <other request-specific values here > }
         """
+        # TODO: MIT_OLL test every handler for anonymous user
         handlers = {
             'hint_button': self.hint_button,
             'problem_get': self.get_problem,

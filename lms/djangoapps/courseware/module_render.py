@@ -1042,8 +1042,10 @@ def handle_xblock_callback(request, course_id, usage_id, handler, suffix=None):
 
     # NOTE (CCB): Allow anonymous GET calls (e.g. for transcripts). Modifying this view is simpler than updating
     # the XBlocks to use `handle_xblock_callback_noauth`, which is practically identical to this view.
-    if request.method != 'GET' and not (request.user and request.user.is_authenticated):
-        return HttpResponseForbidden()
+
+    # TODO: MIT_OLL remove this to enable ajax problem operations
+    # if request.method != 'GET' and not (request.user and request.user.is_authenticated):
+    #     return HttpResponseForbidden()
 
     request.user.known = request.user.is_authenticated
 

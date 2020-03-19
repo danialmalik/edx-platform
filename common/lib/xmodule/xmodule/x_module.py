@@ -962,6 +962,7 @@ class XModule(HTMLSnippet, XModuleMixin):
 
         Makes no use of the context parameter
         """
+        # CAPA problems get here
         return Fragment(self.get_html())
 
 
