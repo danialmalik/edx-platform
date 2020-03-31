@@ -23,7 +23,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install Dependencies
       run: |
-        pip install -r requirements/edx/testing.txt
+        make requirements
     - name: Run Tests
       run: |
         paver test_python
