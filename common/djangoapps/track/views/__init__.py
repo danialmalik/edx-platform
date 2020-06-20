@@ -111,27 +111,15 @@ def server_track(request, event_type, event, page=None):
     except:
         username = "anonymous"
 
-    # define output:
-    event = {
-        "username": username,
-        "ip": _get_request_ip(request),
-        "referer": _get_request_header(request, 'HTTP_REFERER'),
-        "accept_language": _get_request_header(request, 'HTTP_ACCEPT_LANGUAGE'),
-        "event_source": "server",
-        "event_type": event_type,
-        "event": event,
-        "agent": _get_request_header(request, 'HTTP_USER_AGENT').encode().decode('latin1'),
-        "page": page,
-        "time": datetime.datetime.utcnow().replace(tzinfo=pytz.utc),
-        "host": _get_request_header(request, 'SERVER_NAME'),
-        "context": eventtracker.get_tracker().resolve_context(),
-    }
+    context_override = contexts.course_context_from_url(page)
+    context_override['username'] = username
+    context_override['event_source'] = 'server'
+    context_override['page'] = page
 
-    # Some duplicated fields are passed into event-tracking via the context by track.middleware.
-    # Remove them from the event here since they are captured elsewhere.
-    shim.remove_shim_context(event)
+    event_tracker = eventtracker.get_tracker()
 
-    log_event(event)
+    with event_tracker.context('edx.course.server', context_override):
+        eventtracker.emit(name=event_type, data=event)
 
 
 def task_track(request_info, task_info, event_type, event, page=None):
@@ -156,22 +144,47 @@ def task_track(request_info, task_info, event_type, event, page=None):
 
     # supplement event information with additional information
     # about the task in which it is running.
-    full_event = dict(event, **task_info)
+    data = dict(event, **task_info)
 
-    # Get values from the task-level
-    # information, or just add placeholder values.
-    with eventtracker.get_tracker().context('edx.course.task', contexts.course_context_from_url(page)):
-        event = {
-            "username": request_info.get('username', 'unknown'),
-            "ip": request_info.get('ip', 'unknown'),
-            "event_source": "task",
-            "event_type": event_type,
-            "event": full_event,
-            "agent": request_info.get('agent', 'unknown'),
-            "page": page,
-            "time": datetime.datetime.utcnow().replace(tzinfo=pytz.utc),
-            "host": request_info.get('host', 'unknown'),
-            "context": eventtracker.get_tracker().resolve_context(),
-        }
+    try:
+        username = request.user.username
+    except:
+        username = "anonymous"
 
-    log_event(event)
+    context_override = contexts.course_context_from_url(page)
+    context_override['username'] = username
+    context_override['event_source'] = 'server'
+    context_override['page'] = page
+
+    with eventtracker.get_tracker().context('edx.course.task', context_override):
+        eventtracker.emit(name=event_type, data=data)
+
+    return HttpResponse('success')
+
+
+@login_required
+@ensure_csrf_cookie
+def view_tracking_log(request, args=''):
+    """View to output contents of TrackingLog model.  For staff use only."""
+    if not request.user.is_staff:
+        return redirect('/')
+    nlen = 100
+    username = ''
+    if args:
+        for arg in args.split('/'):
+            if arg.isdigit():
+                nlen = int(arg)
+            if arg.startswith('username='):
+                username = arg[9:]
+
+    record_instances = TrackingLog.objects.all().order_by('-time')
+    if username:
+        record_instances = record_instances.filter(username=username)
+    record_instances = record_instances[0:nlen]
+
+    # fix dtstamp
+    fmt = '%a %d-%b-%y %H:%M:%S'  # "%Y-%m-%d %H:%M:%S %Z%z"
+    for rinst in record_instances:
+        rinst.dtstr = rinst.time.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('US/Eastern')).strftime(fmt)
+
+    return render_to_response('tracking_log.html', {'records': record_instances})
