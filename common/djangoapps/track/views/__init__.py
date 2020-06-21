@@ -117,7 +117,6 @@ def server_track(request, event_type, event, page=None):
     context_override['page'] = page
 
     event_tracker = eventtracker.get_tracker()
-
     with event_tracker.context('edx.course.server', context_override):
         eventtracker.emit(name=event_type, data=event)
 
@@ -146,45 +145,12 @@ def task_track(request_info, task_info, event_type, event, page=None):
     # about the task in which it is running.
     data = dict(event, **task_info)
 
-    try:
-        username = request.user.username
-    except:
-        username = "anonymous"
-
     context_override = contexts.course_context_from_url(page)
-    context_override['username'] = username
-    context_override['event_source'] = 'server'
+    context_override['username'] = request_info.get('username', 'unknown')
+    context_override['event_source'] = 'task'
     context_override['page'] = page
 
     with eventtracker.get_tracker().context('edx.course.task', context_override):
         eventtracker.emit(name=event_type, data=data)
 
     return HttpResponse('success')
-
-
-@login_required
-@ensure_csrf_cookie
-def view_tracking_log(request, args=''):
-    """View to output contents of TrackingLog model.  For staff use only."""
-    if not request.user.is_staff:
-        return redirect('/')
-    nlen = 100
-    username = ''
-    if args:
-        for arg in args.split('/'):
-            if arg.isdigit():
-                nlen = int(arg)
-            if arg.startswith('username='):
-                username = arg[9:]
-
-    record_instances = TrackingLog.objects.all().order_by('-time')
-    if username:
-        record_instances = record_instances.filter(username=username)
-    record_instances = record_instances[0:nlen]
-
-    # fix dtstamp
-    fmt = '%a %d-%b-%y %H:%M:%S'  # "%Y-%m-%d %H:%M:%S %Z%z"
-    for rinst in record_instances:
-        rinst.dtstr = rinst.time.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('US/Eastern')).strftime(fmt)
-
-    return render_to_response('tracking_log.html', {'records': record_instances})

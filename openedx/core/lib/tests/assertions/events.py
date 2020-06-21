@@ -6,7 +6,7 @@ import pprint
 import six
 
 
-def assert_event_matches(expected, actual, tolerate=None):
+def assert_event_matches(expected, actual, tolerate=None, string_payload_key=None):
     """
     Compare two event dictionaries.
 
@@ -70,7 +70,7 @@ def assert_event_matches(expected, actual, tolerate=None):
     refer to the value of the "user_id" field contained within the dictionary referred to by the "event" field in the
     root dictionary.
     """
-    differences = get_event_differences(expected, actual, tolerate=tolerate)
+    differences = get_event_differences(expected, actual, tolerate=tolerate, string_payload_key=string_payload_key)
     if len(differences) > 0:
         debug_info = [
             '',
@@ -150,15 +150,15 @@ def assert_events_equal(expected, actual):
     assert_event_matches(expected, actual, tolerate=EventMatchTolerates.strict())
 
 
-def get_event_differences(expected, actual, tolerate=None):
+def get_event_differences(expected, actual, tolerate=None, string_payload_key=None):
     """Given two events, gather a list of differences between them given some set of tolerated variances."""
     tolerate = EventMatchTolerates.default_if_not_defined(tolerate)
 
     # Some events store their payload in a JSON string instead of a dict. Comparing these strings can be problematic
     # since the keys may be in different orders, so we parse the string here if we were expecting a dict.
     if EventMatchTolerates.STRING_PAYLOAD in tolerate:
-        expected = parse_event_payload(expected)
-        actual = parse_event_payload(actual)
+        expected = parse_event_payload(expected, string_payload_key)
+        actual = parse_event_payload(actual, string_payload_key)
 
     def should_strict_compare(path):
         """
@@ -188,17 +188,19 @@ def block_indent(text, spaces=4):
     return '\n'.join([(' ' * spaces) + l for l in pprint.pformat(text).splitlines()])
 
 
-def parse_event_payload(event):
+def parse_event_payload(event, string_payload_key=None):
     """
-    Given an event, parse the "event" field as a JSON string.
+    Given an event and a key, parse the field matching the `key` as a JSON string.
 
     Note that this may simply return the same event unchanged, or return a new copy of the event with the payload
     parsed. It will never modify the event in place.
     """
-    if 'event' in event and isinstance(event['event'], six.string_types):
+    string_payload_key = string_payload_key or 'event'
+
+    if string_payload_key in event and isinstance(event[string_payload_key], six.string_types):
         event = event.copy()
         try:
-            event['event'] = json.loads(event['event'])
+            event[string_payload_key] = json.loads(event[string_payload_key])
         except ValueError:
             pass
     return event

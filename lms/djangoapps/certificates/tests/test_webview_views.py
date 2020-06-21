@@ -1582,7 +1582,7 @@ class CertificateEventTests(CommonCertificatesTestCase, EventTrackingTestCase):
         )
         response = self.client.get(test_url)
         self.assertEqual(response.status_code, 200)
-        actual_event = self.get_event()
+        actual_event = self.get_event(1)
         self.assertEqual(actual_event['name'], 'edx.certificate.evidence_visited')
         assert_event_matches(
             {
@@ -1635,5 +1635,5 @@ class CertificateEventTests(CommonCertificatesTestCase, EventTrackingTestCase):
                     'enrollment_mode': 'honor',
                 },
             },
-            self.get_event()
+            self.get_event(1)
         )
