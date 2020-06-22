@@ -1,5 +1,4 @@
 import ddt
-import json
 import six
 from django.contrib.auth.models import User
 from django.test.client import RequestFactory
@@ -345,9 +344,3 @@ class TestTrackViews(EventTrackingTestCase):
 
         actual_event = self.get_event()
         assert_event_matches(expected_event, actual_event)
-
-    def assert_json_matches(self, expected, actual):
-        """
-        Assert that two json strings match.
-        """
-        self.assertDictEqual(expected, actual)

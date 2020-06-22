@@ -2065,7 +2065,9 @@ class TestModuleTrackingContext(SharedModuleStoreTestCase):
         self.assertIn('data_field', context_info['asides']['test_aside'])
         self.assertEqual(context_info['asides']['test_aside']['data_field'], 'test2')
 
+    @patch('lms.djangoapps.courseware.module_render.tracker')
     def handle_callback_and_get_context_info(self,
+                                             mock_tracker_for_context,
                                              mock_tracker,
                                              problem_display_name=None,
                                              call_idx=0):
@@ -2073,7 +2075,6 @@ class TestModuleTrackingContext(SharedModuleStoreTestCase):
         Creates a fake module, invokes the callback and extracts the 'context'
         metadata from the emitted problem_check event.
         """
-        mocked_tracker_for_context_1 = patch('lms.djangoapps.courseware.module_render.tracker').start()
 
         descriptor_kwargs = {
             'category': 'problem',
@@ -2097,9 +2098,7 @@ class TestModuleTrackingContext(SharedModuleStoreTestCase):
         event = mock_call[2]
 
         self.assertEquals(event['name'], 'problem_check')
-        context = mocked_tracker_for_context_1.get_tracker.mock_calls[call_idx][1][1]
-        # context = mocked_tracker_for_context_1.get_tracker.mock_calls[call_idx][1][1]
-        # mocked_tracker_for_context_1.stop()
+        context = mock_tracker_for_context.get_tracker.mock_calls[call_idx][1][1]
         return context
 
     def handle_callback_and_get_module_info(self, mock_tracker, problem_display_name=None):
