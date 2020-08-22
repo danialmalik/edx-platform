@@ -46,7 +46,7 @@ class Command(BaseCommand):
 
         # Write mapping to output file in CSV format with a simple header
         try:
-            with open(output_filename, 'wb') as output_file:
+            with open(output_filename, 'w') as output_file:
                 csv_writer = csv.writer(output_file)
                 csv_writer.writerow((
                     "User ID",

@@ -915,6 +915,102 @@ TRACKING_BACKENDS = {
 # names/passwords.  Heartbeat events are likely not interesting.
 TRACKING_IGNORE_URL_PATTERNS = [r'^/event', r'^/login', r'^/heartbeat', r'^/segmentio/event', r'^/performance']
 
+CALIPER_SETTINGS = {
+    'ENGINE': 'edx_analytics_transformers.backends.caliper.CaliperBackend',
+    'OPTIONS': {
+        'routers': {
+            'caliper_router': {
+                'ENGINE': 'edx_analytics_transformers.routers.requests_router.RequestsRouter',
+                'OPTIONS': {
+                    'processors': [
+                        {
+                            'ENGINE': 'edx_analytics_transformers.processors.caliper_envelop.CaliperEnvelopProcessor',
+                            'OPTIONS': {
+                                'sensor_id': 'http://test.com/sensors'
+                            }
+                        }
+                    ],
+                    'backend_name': 'caliper',
+                }
+            }
+        }
+
+    }
+}
+
+XAPI_SETTINGS = {
+    'ENGINE': 'edx_analytics_transformers.backends.xapi.XApiBackend',
+    'OPTIONS': {
+        'routers': {
+            'xapi_router': {
+                'ENGINE': 'edx_analytics_transformers.routers.requests_router.RequestsRouter',
+                # 'ENGINE': 'edx_analytics_transformers.transformers.xapi.routers.XApiRouter',
+                'OPTIONS': {
+                    'processors': [],
+                    'backend_name': 'xapi',
+                }
+            }
+        }
+
+    }
+}
+
+
+ASYNC_ROUTING_BACKENDS = {
+    'caliper': CALIPER_SETTINGS,
+    'xapi': XAPI_SETTINGS,
+}
+
+ASYNC_ROUTING_FILTERS = {
+    'caliper': {
+        'type': 'allowlist',
+        'regular_expressions': [
+            'edx.course.enrollment.activated',
+            'edx.course.enrollment.deactivated',
+
+            'edx.ui.lms.link_clicked',
+            'edx.ui.lms.sequence.outline.selected',
+            'edx.ui.lms.outline.selected',
+            'edx.ui.lms.sequence.next_selected',
+            'edx.ui.lms.sequence.previous_selected',
+            'edx.ui.lms.sequence.tab_selected',
+
+            'showanswer',
+            'edx.problem.hint.demandhint_displayed',
+            'edx.grades.problem.submitted',
+            'problem_check',
+
+
+            'load_video',
+            'edx.video.loaded',
+            'play_video',
+            'edx.video.played',
+            'stop_video',
+            'edx.video.stopped',
+            'complete_video',
+            'edx.video.completed',
+            'pause_video',
+            'edx.video.paused',
+            'seek_video',
+            'edx.video.position.changed',
+        ]
+    },
+    'xapi': {
+        'type': 'blocklist',
+        'regular_expressions': [
+            '.*'
+        ]
+    }
+}
+
+
+REALTIME_EVENTING_BACKEND = {      # our
+    'ENGINE': 'eventtracking.backends.async_routing.AsyncRoutingBackend',
+    'OPTIONS': {
+        'processors': [],
+    },
+}
+
 EVENT_TRACKING_ENABLED = True
 EVENT_TRACKING_BACKENDS = {
     'tracking_logs': {
@@ -935,6 +1031,7 @@ EVENT_TRACKING_BACKENDS = {
             ]
         }
     },
+    'realtime_eventing_backend': REALTIME_EVENTING_BACKEND,
     'segmentio': {
         'ENGINE': 'eventtracking.backends.routing.RoutingBackend',
         'OPTIONS': {
@@ -2338,6 +2435,7 @@ INSTALLED_APPS = [
     'staticbook',
     'track',
     'eventtracking.django.apps.EventTrackingConfig',
+    'edx_analytics_transformers.django.apps.EdxAnalyticsTransformersConfig',
     'util',
     'lms.djangoapps.certificates.apps.CertificatesConfig',
     'dashboard',
